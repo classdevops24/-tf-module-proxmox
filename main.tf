@@ -1,21 +1,51 @@
-variable "public_key" {}
-variable "name" {}
-variable "ip" {
+variable "promox_vm_name" {
+type = string
+default= "terraform-ubuntu-22-04-promox-vm"
+}
+
+variable "promox_vm_ip" {
+  type = string
+  default= "dhcp"
+}
+
+variable "promox_vm_gateway" {
   type = string
 }
-variable "gateway" {
+
+variable "promox_vm_nameserver" {
+  type = string
+  default= "192.168.1.95"
+}
+
+variable "proxmox_target_node" {
+  default = "pve"
+}
+
+variable "promox_template_name" {
+  default = "ubuntu-clouding-server-22-04"
+}
+  
+variable "promox_api_url" {
   type = string
 }
-# TLS Resource-a ere soberan izango genuke kasu honetan
+
+variable "promox_api_token_id" {
+  type = string
+}
+
+variable "promox_api_token_secret" {
+  type = string
+}
+
+
 
 terraform {
   required_providers {
     proxmox = {
       source  = "telmate/proxmox"
-      version = ">= 2.9.5"
+      version = "3.0.1-rc1"
     }
   }
-  required_version = ">= 0.14.0"
 }
 
 resource "tls_private_key" "temporary" {
@@ -23,38 +53,54 @@ resource "tls_private_key" "temporary" {
   rsa_bits  = 4096
 }
 
-# The following pm_api_url, token_id and secret must be previously entered in the VM template "config map" in the administrator panel or leave it in environments
+resource "random_string" "lower" {
+  length  = 8
+  upper   = false
+  lower   = true
+  numeric  = false
+  special = false
+}
+
+# all variable must be previously entered in the VM template "config map" 
 
 provider "proxmox" {
-  pm_debug            = false
+  pm_debug            = true
   pm_tls_insecure     = true
-  pm_api_url          = ${var.pm_api_url}
-  pm_api_token_id     = ${var.pm_api_token_id}
-  pm_api_token_secret = ${var.pm_api_token_secret}
+  pm_api_url          = var.promox_api_url
+  pm_api_token_id     = var.promox_api_token_id
+  pm_api_token_secret = var.promox_api_token_secret
+  pm_log_file   = "terraform-plugin-proxmox.log"
+  pm_log_levels = {
+    _default = "debug"
+    _capturelog = ""
+ }
 }
 
 
 resource "proxmox_vm_qemu" "hobbyfarm" {
-
-  name        = var.name
-  target_node = ${var.target_node}
+  
+  name        = "${var.promox_vm_name}-${random_string.lower.result}"
+  target_node = var.proxmox_target_node
   agent       = 1
-  clone       = "ubuntu18-template"
+  clone       = var.promox_template_name
   cores       = 2
   sockets     = 1
   cpu         = "host"
-  memory      = 4096
+  memory      = 2048
 
-  scsihw      = "virtio-scsi-pci"
-
-  vga {
-    type = "std"
-  }
-
-  disk {
-    size            = "10G"
-    type            = "virtio"
-    storage         = "vz2TB"
+  scsihw      = "virtio-scsi-single"
+  bootdisk = "scsi0"
+  cloudinit_cdrom_storage = "local-lvm"
+  
+   disks {
+    scsi {
+      scsi0 {
+        disk {
+          size = 30
+          storage = "local-lvm"
+        }
+      }
+    }
   }
 
   network {
@@ -63,15 +109,15 @@ resource "proxmox_vm_qemu" "hobbyfarm" {
   }
 
   os_type      = "cloud-init"
-  ciuser       = "user"
-  cipassword   = "user"
-  ipconfig0    = "ip=${var.ip}/24,gw=${var.gateway}"
-  nameserver   = "8.8.8.8"
+  ciuser       = "ubuntu"
+  cipassword   = "cola"
+  #ipconfig0    = "ip=${var.promox_vm_ip},gw=${var.promox_vm_gateway}"
+  ipconfig0    = "ip=${var.promox_vm_ip}"
+  nameserver   = var.promox_vm_nameserver
   sshkeys = <<-EOF
     ${tls_private_key.temporary.public_key_openssh}
-    ${var.public_key}
   EOF
-  ssh_user = "user"
+  ssh_user = "ubuntu"
 
 
   lifecycle {
@@ -82,16 +128,13 @@ resource "proxmox_vm_qemu" "hobbyfarm" {
 
 provisioner "remote-exec" {
   inline = [
-      "sleep 10",
-      #"sudo ip a | grep \"inet \" | grep -v 127.0.0.1 | head -n1 | awk '{print $2}' | cut -d '/'",
-      #"Oraingoz ez dut erabiliko guzti hau",
-      "sleep 10"
+      "ip a"
       ]
 
   connection {
     type        = "ssh"
-    host        = var.ip
-    user        = "user"
+    host        = proxmox_vm_qemu.hobbyfarm.default_ipv4_address
+    user        = "ubuntu"
     password    = ""
     private_key = tls_private_key.temporary.private_key_pem
   }
@@ -110,4 +153,8 @@ output "public_ip" {
 
 output "hostname" {
   value = proxmox_vm_qemu.hobbyfarm.name
+}
+
+output "private_key" {
+value = nonsensitive(tls_private_key.temporary.private_key_pem)
 }
