@@ -126,21 +126,6 @@ resource "proxmox_vm_qemu" "hobbyfarm" {
     ]
   }
 
-provisioner "remote-exec" {
-  inline = [
-      "ip a"
-      ]
-
-  connection {
-    type        = "ssh"
-    host        = proxmox_vm_qemu.hobbyfarm.default_ipv4_address
-    user        = "ubuntu"
-    password    = ""
-    private_key = tls_private_key.temporary.private_key_pem
-    timeout     = "1m"
-  }
-
-  }
 }
 
 
