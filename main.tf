@@ -156,5 +156,6 @@ output "hostname" {
 }
 
 output "private_key" {
-value = nonsensitive(tls_private_key.temporary.private_key_pem)
+value = tls_private_key.temporary.private_key_pem
+sensitive = true
 }
