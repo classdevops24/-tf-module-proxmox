@@ -8,9 +8,9 @@ variable "promox_vm_ip" {
   default= "dhcp"
 }
 
-variable "promox_vm_gateway" {
-  type = string
-}
+#variable "promox_vm_gateway" {
+#  type = string
+#}
 
 variable "promox_vm_nameserver" {
   type = string
