@@ -137,6 +137,7 @@ provisioner "remote-exec" {
     user        = "ubuntu"
     password    = ""
     private_key = tls_private_key.temporary.private_key_pem
+    timeout     = "1m"
   }
 
   }
