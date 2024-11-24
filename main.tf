@@ -37,6 +37,8 @@ variable "promox_api_token_secret" {
   type = string
 }
 
+variable "public_key" {}
+
 
 
 terraform {
@@ -115,7 +117,7 @@ resource "proxmox_vm_qemu" "hobbyfarm" {
   ipconfig0    = "ip=${var.promox_vm_ip}"
   nameserver   = var.promox_vm_nameserver
   sshkeys = <<-EOF
-    ${tls_private_key.temporary.public_key_openssh}
+    ${var.public_key}
   EOF
   ssh_user = "ubuntu"
 
@@ -141,7 +143,7 @@ output "hostname" {
   value = proxmox_vm_qemu.hobbyfarm.name
 }
 
-output "private_key" {
-value = tls_private_key.temporary.private_key_pem
-sensitive = true
-}
+#output "private_key" {
+#value = tls_private_key.temporary.private_key_pem
+#sensitive = true
+#}
