@@ -1,6 +1,6 @@
 variable "promox_vm_name" {
 type = string
-default= "terraform-ubuntu-22-04-promox-vm"
+default= "ubuntu-22-04-vm"
 }
 
 variable "promox_vm_ip" {
