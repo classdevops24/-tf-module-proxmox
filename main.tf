@@ -22,7 +22,7 @@ variable "proxmox_target_node" {
 }
 
 variable "promox_template_name" {
-  default = "ubuntu-clouding-server-22-04-template"
+  default = "ubuntu-clouding-server-22-04-template-devops"
 }
   
 variable "promox_api_url" {
