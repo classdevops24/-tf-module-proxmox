@@ -1,6 +1,6 @@
 variable "promox_vm_name" {
 type = string
-default= "terraform-ubuntu-22-04-promox-vm"
+default= "ubuntu-22-04-vm"
 }
 
 variable "promox_vm_ip" {
@@ -22,7 +22,7 @@ variable "proxmox_target_node" {
 }
 
 variable "promox_template_name" {
-  default = "ubuntu-clouding-server-22-04"
+  default = "ubuntu-clouding-22-04-2gb-template-devops"
 }
   
 variable "promox_api_url" {
@@ -36,6 +36,8 @@ variable "promox_api_token_id" {
 variable "promox_api_token_secret" {
   type = string
 }
+
+variable "public_key" {}
 
 
 
@@ -115,7 +117,7 @@ resource "proxmox_vm_qemu" "hobbyfarm" {
   ipconfig0    = "ip=${var.promox_vm_ip}"
   nameserver   = var.promox_vm_nameserver
   sshkeys = <<-EOF
-    ${tls_private_key.temporary.public_key_openssh}
+    ${var.public_key}
   EOF
   ssh_user = "ubuntu"
 
@@ -126,20 +128,6 @@ resource "proxmox_vm_qemu" "hobbyfarm" {
     ]
   }
 
-provisioner "remote-exec" {
-  inline = [
-      "ip a"
-      ]
-
-  connection {
-    type        = "ssh"
-    host        = proxmox_vm_qemu.hobbyfarm.default_ipv4_address
-    user        = "ubuntu"
-    password    = ""
-    private_key = tls_private_key.temporary.private_key_pem
-  }
-
-  }
 }
 
 
@@ -153,8 +141,4 @@ output "public_ip" {
 
 output "hostname" {
   value = proxmox_vm_qemu.hobbyfarm.name
-}
-
-output "private_key" {
-value = nonsensitive(tls_private_key.temporary.private_key_pem)
 }
