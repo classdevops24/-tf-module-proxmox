@@ -22,7 +22,7 @@ variable "proxmox_target_node" {
 }
 
 variable "promox_template_name" {
-  default = "ubuntu-clouding-server-22-04"
+  default = "ubuntu-clouding-server-22-04-template"
 }
   
 variable "promox_api_url" {
@@ -39,6 +39,23 @@ variable "promox_api_token_secret" {
 
 variable "public_key" {}
 
+variable "user_name" {
+  type = string
+}
+
+variable "user_password" {
+  type = string
+}
+
+variable "ram_name" {
+  type = string
+  default = "2g"
+}
+
+variable "ram_size" {
+  type = number
+  default = 2048
+}
 
 
 terraform {
@@ -48,11 +65,6 @@ terraform {
       version = "3.0.1-rc1"
     }
   }
-}
-
-resource "tls_private_key" "temporary" {
-  algorithm = "RSA"
-  rsa_bits  = 4096
 }
 
 resource "random_string" "lower" {
@@ -79,16 +91,16 @@ provider "proxmox" {
 }
 
 
-resource "proxmox_vm_qemu" "hobbyfarm" {
+resource "proxmox_vm_qemu" "classdevops24_learn_platform" {
   
   name        = "${var.promox_vm_name}-${random_string.lower.result}"
   target_node = var.proxmox_target_node
   agent       = 1
-  clone       = var.promox_template_name
+  clone       = "${var.promox_template_name}-${var.ram_name}"
   cores       = 2
   sockets     = 1
   cpu         = "host"
-  memory      = 2048
+  memory      = var.ram_size
 
   scsihw      = "virtio-scsi-single"
   bootdisk = "scsi0"
@@ -111,15 +123,15 @@ resource "proxmox_vm_qemu" "hobbyfarm" {
   }
 
   os_type      = "cloud-init"
-  ciuser       = "ubuntu"
-  cipassword   = "cola"
+  ciuser       = var.user_name
+  cipassword   = var.user_password
   #ipconfig0    = "ip=${var.promox_vm_ip},gw=${var.promox_vm_gateway}"
   ipconfig0    = "ip=${var.promox_vm_ip}"
   nameserver   = var.promox_vm_nameserver
   sshkeys = <<-EOF
     ${var.public_key}
   EOF
-  ssh_user = "ubuntu"
+  ssh_user = var.user_name
 
 
   lifecycle {
@@ -132,18 +144,13 @@ resource "proxmox_vm_qemu" "hobbyfarm" {
 
 
 output "private_ip" {
-  value = proxmox_vm_qemu.hobbyfarm.default_ipv4_address
+  value = proxmox_vm_qemu.classdevops24_learn_platform.default_ipv4_address
 }
 
 output "public_ip" {
-  value = proxmox_vm_qemu.hobbyfarm.default_ipv4_address
+  value = proxmox_vm_qemu.classdevops24_learn_platform.default_ipv4_address
 }
 
 output "hostname" {
-  value = proxmox_vm_qemu.hobbyfarm.name
+  value = proxmox_vm_qemu.classdevops24_learn_platform.name
 }
-
-#output "private_key" {
-#value = tls_private_key.temporary.private_key_pem
-#sensitive = true
-#}
